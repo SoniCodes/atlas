@@ -24,25 +24,50 @@ send a message.
 
 ## Consequences
 
-About 7x faster for the query I'll use most. Cost is two paths instead of one, plus
-something has to decide which path a request takes.
+Three measurements now, same model, same image, same prompt:
+-> Direct to Ollama: 4.6s
+-> Agent loop, image attached: 25.5s
+-> Agent loop, agent has to go find the file itself: ~33s
 
-The 33s isn't what the glasses will actually see even on the agent path. The phone app
-sends the image with the request so it skips the first pass and the tool call entirely.
-Haven't measured that yet, the CLI can't attach images.
+I expected attaching the image to close most of the gap, since it skips the first pass and
+the tool call. It didn't. Still 5.5x slower than direct. So the tool round trip was never
+the main cost.
 
-Tried to speed up the direct path by turning off the model's thinking, since it writes
-several paragraphs debating itself before it answers. Two attempts, neither worked:
+The real overhead is that the agent sends 8,264 tokens of system prompt and tool definitions
+on every single request before it even looks at the image. That's a fixed ~21 second tax
+that the direct path doesn't pay at all. Same decision as before but for a better reason
+than what I originally wrote.
+
+Getting the agent path to work with an image at all took five config fixes. None of them
+were guesses, I found them by reading the overflow numbers in `openclaw logs`:
+- agents.defaults.model.primary was missing the :latest tag, so it didn't match the declared
+provider model and OpenClaw invented a phantom text-only 200k context model. The real vision
+model was never being used.
+- tools.profile was "coding", which loaded about 9,280 tokens of tool definitions against an
+8,000 token input budget. Nothing fit, not even "say hello".
+- deleted BOOTSTRAP.md out of the workspace, ~264 tokens, and the file itself says to delete
+it after first run anyway.
+- compaction.reserveTokens was holding back 8,000 of the model's 16,000 context for the
+reply, so half the window was gone before anything was sent.
+- tools.profile "minimal" strips the `image` tool, which is the one thing vision needs. Had
+to add it back with tools.alsoAllow. Note alsoAllow merges on top of the profile, plain
+`allow` would have replaced the whole thing.
+
+All of those are captured in scripts/configure-openclaw.sh so they're reproducible.
+
+Also tried to speed up the direct path by turning off the model's thinking, since it writes
+several paragraphs debating itself before answering. Two attempts, neither worked:
 -> --think=false only changes how Ollama renders it. The <think> tag just shows up as raw
 text in the output instead. Model still generates the tokens.
--> /no_think in the prompt did nothing either. That's a Qwen3 text model thing, doesn't
-seem to reach this one.
+-> /no_think in the prompt did nothing either. That's a Qwen3 text model thing, doesn't seem
+to reach this one.
 Looks like thinking is baked in for this model as Ollama serves it.
 
-Also couldn't really measure any of it. Ran the same command four times and got 2.2s, 2.5s,
-4.6s and 6.5s. Temperature is 1 so the model rambles a different amount every time, and
-that swing is bigger than anything I was trying to measure. Single timings aren't
-measurements. Need real percentiles before tuning this, which is why observability is next.
+Couldn't really measure that properly either. Ran the same command four times and got 2.2s,
+2.5s, 4.6s and 6.5s, because temperature is 1 and the model rambles a different amount every
+time. Single timings aren't measurements. Need real percentiles before tuning this, which is
+why observability is next.
 
-Lesson: watching the GPU showed me the two pass thing. Just timing it would have only told
-me "slow".
+Lesson: watching the GPU showed me the two pass thing, and reading the actual token counts in
+the logs showed me the five config bugs. Just timing it or guessing at fixes would have told
+me nothing. Every hypothesis I had before looking at real numbers was wrong.
