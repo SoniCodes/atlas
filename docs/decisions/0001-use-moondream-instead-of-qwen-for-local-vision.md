@@ -28,3 +28,5 @@ of the test image used approximate language ("at least ten individuals") instead
 counts. Fine for general "what am I looking at" queries, but not reliable for anything needing
 precise recognition, reading exact card values for a blackjack-advisor feature, for example,
 will need a narrower, specialized approach instead of this model.
+
+**Superseded by [0002](0002-switch-to-qwen3-vl-for-local-vision.md).**
