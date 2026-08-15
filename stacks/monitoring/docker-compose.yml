@@ -14,3 +14,15 @@ services:
       - '--path.sysfs=/host/sys'
       - '--path.rootfs=/rootfs'
 
+  nvidia-exporter:
+    image: utkuozdemir/nvidia_gpu_exporter:1.14.0
+    container_name: nvidia-exporter
+    restart: unless-stopped
+    network_mode: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, utility]
