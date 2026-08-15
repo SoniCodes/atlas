@@ -71,3 +71,22 @@ why observability is next.
 Lesson: watching the GPU showed me the two pass thing, and reading the actual token counts in
 the logs showed me the five config bugs. Just timing it or guessing at fixes would have told
 me nothing. Every hypothesis I had before looking at real numbers was wrong.
+
+## Correction (measured later)
+
+The ~21s is NOT the prompt overhead. Measured prompt eval on this box at 4,387 tok/s, so
+those 8,264 tokens cost about 1.9 seconds, not 21. Generation runs at ~119 tok/s, so 21s of
+gap is roughly 2,500 GENERATED tokens — the model thinking, plus multiple sequential turns
+in the agent loop.
+
+So trimming tools.profile bought me about 2 seconds, not the 20 I thought. The real lever is
+cutting thinking output and agent round-trips, not tool definitions.
+
+Decision stands, reasoning was wrong. Second time on this project a hypothesis I formed
+before measuring turned out wrong by a wide margin.
+
+Also worth recording: every timing in this ADR is WARM. Ollama's default keep-alive is 5
+minutes and load_duration measured 5.07s of a 7.82s request. For a wearable used sporadically
+through the day essentially every request is cold, so none of these numbers describe what the
+glasses will actually experience. Measuring that properly is what the observability phase is
+for.
