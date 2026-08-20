@@ -1,2 +1,3 @@
-FROM qwen3-vl:4b
+FROM qwen3-vl:4b-instruct
 PARAMETER num_ctx 16000
+PARAMETER temperature 0.3
