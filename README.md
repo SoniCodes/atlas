@@ -1,11 +1,20 @@
 # Atlas
 
-Personal homelab and AI infrastructure platform.
-Ubuntu 24.04 · Ryzen 7 7700X · RTX 3070 · Docker · GPU containers
+Homelab box for local AI inference.
+Ubuntu 24.04, Ryzen 7 7700X, RTX 3070, Docker.
 
-## Structure
+## Hosts
 
-- `stacks/` — Docker Compose service stacks
-- `docs/runbooks/` — operational procedures
-- `docs/decisions/` — architecture decision records
-- `scripts/` — automation
+- `atlas` - the GPU machine. Inference runs here.
+- `macnode` - a Mac running Fedora Asahi (Linux on Apple Silicon).
+  Monitoring lives here (Prometheus, Grafana). It scrapes atlas over Tailscale.
+
+## Layout
+
+- `stacks/` - Docker Compose services on atlas (Ollama, exporters)
+- `hosts/macnode/` - Prometheus and Grafana Quadlet units, configs
+- `docs/decisions/` - ADRs (why things are the way they are)
+- `docs/runbooks/` - how to rebuild and operate things
+- `scripts/` - setup helpers
+- `network/` - netplan
+- `security/` - sshd hardening drop-in
