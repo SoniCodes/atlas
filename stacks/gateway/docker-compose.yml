@@ -1,0 +1,8 @@
+services:
+  gateway:
+    build: .
+    image: atlas/gateway:dev
+    container_name: gateway
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:8080:8000
