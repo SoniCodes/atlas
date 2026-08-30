@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+import httpx
 
 app = FastAPI()
 
@@ -14,4 +15,14 @@ def health():
 
 @app.post("/v1/ask")
 def ask(req: AskRequest):
-    return {"message": "stub", "you_said": req.text, "mode": req.mode, "has_image": req.image is not None}
+    r = httpx.post(
+        "http://ollama:11434/api/generate",
+        json={
+            "model": "qwen3-vl-atlas:latest",
+            "prompt": req.text,
+            "stream": False,
+        },
+        timeout=120,
+    )
+    data = r.json()
+    return {"answer": data["response"]}
