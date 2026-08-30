@@ -1,8 +1,12 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import httpx
+import os
 
 app = FastAPI()
+
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://ollama:11434")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl-atlas:latest")
 
 class AskRequest(BaseModel):
     text: str
@@ -21,9 +25,9 @@ def ask(req: AskRequest):
         num_predict = 120
 
     r = httpx.post(
-        "http://ollama:11434/api/generate",
+        f"{OLLAMA_URL}/api/generate",
         json={
-            "model": "qwen3-vl-atlas:latest",
+            "model": OLLAMA_MODEL,
             "prompt": req.text,
             "stream": False,
             "keep_alive": -1,

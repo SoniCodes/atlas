@@ -9,6 +9,9 @@ services:
     networks:
       - default
       - ollama_default
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen3-vl-atlas:latest
 
 networks:
   ollama_default:
