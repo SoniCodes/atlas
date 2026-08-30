@@ -15,12 +15,19 @@ def health():
 
 @app.post("/v1/ask")
 def ask(req: AskRequest):
+    if req.mode == "chat":
+        num_predict = 600
+    else:
+        num_predict = 120
+
     r = httpx.post(
         "http://ollama:11434/api/generate",
         json={
             "model": "qwen3-vl-atlas:latest",
             "prompt": req.text,
             "stream": False,
+            "keep_alive": -1,
+            "options": {"num_predict": num_predict},
         },
         timeout=120,
     )
