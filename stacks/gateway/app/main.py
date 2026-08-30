@@ -25,4 +25,12 @@ def ask(req: AskRequest):
         timeout=120,
     )
     data = r.json()
-    return {"answer": data["response"]}
+    return {
+        "answer": data["response"],
+        "total_ms": data["total_duration"] // 1_000_000,
+        "load_ms": data["load_duration"] // 1_000_000,
+        "prompt_eval_ms": data["prompt_eval_duration"] // 1_000_000,
+        "eval_ms": data["eval_duration"] // 1_000_000,
+        "prompt_tokens": data["prompt_eval_count"],
+        "output_tokens": data["eval_count"],
+        }
