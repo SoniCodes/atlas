@@ -1,12 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, Header, HTTPException
 from pydantic import BaseModel
 import httpx
 import os
+import secrets
 
 app = FastAPI()
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://ollama:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl-atlas:latest")
+GATEWAY_TOKEN = os.environ["GATEWAY_TOKEN"]
 
 class AskRequest(BaseModel):
     text: str
@@ -17,7 +19,12 @@ class AskRequest(BaseModel):
 def health():
     return {"status": "ok"}
 
-@app.post("/v1/ask")
+def require_token(authorization: str = Header(default="")):
+    expected = f"Bearer {GATEWAY_TOKEN}"
+    if not secrets.compare_digest(authorization, expected):
+        raise HTTPException(status_code=401, detail="invalid or missing token")
+
+@app.post("/v1/ask", dependencies=[Depends(require_token)])
 def ask(req: AskRequest):
     if req.mode == "chat":
         num_predict = 600

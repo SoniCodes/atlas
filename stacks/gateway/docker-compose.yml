@@ -12,6 +12,7 @@ services:
     environment:
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: qwen3-vl-atlas:latest
+      GATEWAY_TOKEN: ${GATEWAY_TOKEN}
 
 networks:
   ollama_default:
