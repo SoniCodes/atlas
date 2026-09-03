@@ -24,15 +24,19 @@ def ask(req: AskRequest):
     else:
         num_predict = 120
 
+    payload = {
+        "model": OLLAMA_MODEL,
+        "prompt": req.text,
+        "stream": False,
+        "keep_alive": -1,
+        "options": {"num_predict": num_predict},
+    }
+    if req.image:
+        payload["images"] = [req.image]
+
     r = httpx.post(
         f"{OLLAMA_URL}/api/generate",
-        json={
-            "model": OLLAMA_MODEL,
-            "prompt": req.text,
-            "stream": False,
-            "keep_alive": -1,
-            "options": {"num_predict": num_predict},
-        },
+        json=payload,
         timeout=120,
     )
     data = r.json()
