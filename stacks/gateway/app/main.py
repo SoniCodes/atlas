@@ -21,7 +21,7 @@ def health():
 
 def require_token(authorization: str = Header(default="")):
     expected = f"Bearer {GATEWAY_TOKEN}"
-    if not secrets.compare_digest(authorization, expected):
+    if not secrets.compare_digest(authorization.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="invalid or missing token")
 
 @app.post("/v1/ask", dependencies=[Depends(require_token)])
