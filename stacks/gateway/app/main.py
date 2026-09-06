@@ -41,11 +41,18 @@ def ask(req: AskRequest):
     if req.image:
         payload["images"] = [req.image]
 
-    r = httpx.post(
-        f"{OLLAMA_URL}/api/generate",
-        json=payload,
-        timeout=120,
-    )
+    try:
+        r = httpx.post(
+            f"{OLLAMA_URL}/api/generate",
+            json=payload,
+            timeout=120,
+        )
+        r.raise_for_status()
+    except httpx.RequestError:
+        raise HTTPException(status_code=503, detail="ollama unreachable")
+    except httpx.HTTPStatusError:
+        raise HTTPException(status_code=503, detail="ollama rejected the request")
+
     data = r.json()
     return {
         "answer": data["response"],
