@@ -11,7 +11,8 @@ Volume=%h/atlas/hosts/macnode/prometheus/prometheus.yml:/etc/prometheus/promethe
 Exec=--config.file=/etc/prometheus/prometheus.yml \
      --storage.tsdb.path=/prometheus \
      --storage.tsdb.retention.time=90d \
-     --storage.tsdb.retention.size=20GB
+     --storage.tsdb.retention.size=20GB \
+     --web.enable-admin-api
 DNS=100.100.100.100
 DNSSearch=tail9435ff.ts.net
 [Service]
