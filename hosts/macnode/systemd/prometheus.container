@@ -12,7 +12,8 @@ Exec=--config.file=/etc/prometheus/prometheus.yml \
      --storage.tsdb.path=/prometheus \
      --storage.tsdb.retention.time=90d \
      --storage.tsdb.retention.size=20GB
-
+DNS=100.100.100.100
+DNSSearch=tail9435ff.ts.net
 [Service]
 Restart=always
 
