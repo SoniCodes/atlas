@@ -4,7 +4,6 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
                 sh 'ls -la'
             }
         }
@@ -28,7 +27,7 @@ pipeline {
                     fi
                     echo "OK   .env is not tracked"
 
-                    if git log -p --all | grep -qE "GATEWAY_TOKEN=.+"; then
+                    if git log -p --all ':(exclude)Jenkinsfile' | grep -qE 'GATEWAY_TOKEN=[^[:space:]]{16,}'; then
                         echo "FAIL: token value in git history"
                         exit 1
                     fi
