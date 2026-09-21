@@ -3,11 +3,11 @@
 A self-hosted GPU server I built and operate as if it were production.
 Ubuntu 24.04, Ryzen 7 7700X, RTX 3070 8GB, 32 GB. Headless, managed over SSH.
 
-![Atlas architecture](docs/images/atlas-architecture.jpg)
-
-*Atlas runs the workloads. macnode runs monitoring, deliberately in a separate
+Atlas runs the workloads. macnode runs monitoring, deliberately in a separate
 failure domain — if Atlas dies, something that isn't Atlas notices. Backups are
-pulled by Atlas, not pushed by macnode.*
+pulled by Atlas, not pushed by macnode.
+
+See [the architecture diagram](docs/images/atlas-architecture.jpg).
 
 ## Why this exists
 
