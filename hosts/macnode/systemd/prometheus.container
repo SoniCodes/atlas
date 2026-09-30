@@ -8,6 +8,7 @@ ContainerName=prometheus
 PublishPort=9090:9090
 Volume=prom-data.volume:/prometheus
 Volume=%h/atlas/hosts/macnode/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,Z
+Volume=%h/atlas/hosts/macnode/prometheus/rules:/etc/prometheus/rules:ro,Z
 Exec=--config.file=/etc/prometheus/prometheus.yml \
      --storage.tsdb.path=/prometheus \
      --storage.tsdb.retention.time=90d \
