@@ -1,6 +1,6 @@
 # Runbook — Monitoring stack on macnode
 
-**Last verified:** 2026-08-15
+**Last verified:** 2026-09-30
 **Owner:** vraj
 
 Prometheus and Grafana run on **macnode**, scraping both hosts over Tailscale. This runbook
@@ -50,6 +50,7 @@ hosts/macnode/systemd/prom-data.volume              Quadlet named volume
 hosts/macnode/systemd/grafana.container             Quadlet unit
 hosts/macnode/systemd/grafana-data.volume           Quadlet named volume
 hosts/macnode/prometheus/prometheus.yml             Prometheus's OWN config (what to scrape)
+hosts/macnode/prometheus/rules/alerts.yml           alert rules; loaded via rule_files: glob
 hosts/macnode/grafana/provisioning/
     datasources/prometheus.yml                      Grafana's description OF Prometheus
     dashboards/dashboards.yml                       dashboard provider config
@@ -80,6 +81,30 @@ podman secret ls
 `read -rsp` keeps it out of `~/.bash_history` and out of `ps`.
 
 ---
+
+## Quadlet reads from ~/.config/containers/systemd, not the repo
+
+systemd's Quadlet generator only scans `~/.config/containers/systemd/`. Nothing in
+`~/atlas` is read by systemd directly. The unit files are **symlinked** into that
+directory, so the repo stays the single source and `git pull` takes effect on the
+next `daemon-reload`:
+
+```bash
+cd ~/.config/containers/systemd/
+ln -sf ~/atlas/hosts/macnode/systemd/prometheus.container .
+ln -sf ~/atlas/hosts/macnode/systemd/grafana.container .
+ln -sf ~/atlas/hosts/macnode/systemd/prom-data.volume .
+ln -sf ~/atlas/hosts/macnode/systemd/grafana-data.volume .
+ls -la                              # all four must show as symlinks
+systemctl --user daemon-reload
+```
+
+> **These were copies until 2026-09-30, and it cost an hour.** A `git pull` updated
+> the repo while systemd kept regenerating units from a three-week-old copy. The
+> symptom: a new `Volume=` line for the alert rules directory simply never appeared
+> in `podman inspect`, with no error anywhere — because `rule_files:` is a glob, and
+> a glob matching zero files is legal. Config that looks applied and isn't is the
+> worst failure mode there is. Symlinks make that class of drift impossible.
 
 ## Rebuild from bare metal
 
@@ -120,11 +145,15 @@ podman pull docker.io/grafana/grafana:13.1.3
 Quadlet units inherit systemd's 90s `TimeoutStartSec`. A cold pull can exceed it, and systemd
 kills the unit mid-pull and marks it `failed` — which looks like a config error and isn't.
 
-**6. Deploy the units:**
+**6. Link the units into place** — symlink, do not copy. See the Quadlet section above
+for why:
 
 ```bash
-cp ~/atlas/hosts/macnode/systemd/*.container ~/atlas/hosts/macnode/systemd/*.volume \
-   ~/.config/containers/systemd/
+mkdir -p ~/.config/containers/systemd
+cd ~/.config/containers/systemd/
+ln -sf ~/atlas/hosts/macnode/systemd/*.container .
+ln -sf ~/atlas/hosts/macnode/systemd/*.volume .
+ls -la                              # confirm symlinks, not regular files
 systemctl --user daemon-reload
 systemctl --user start prometheus grafana
 ```
@@ -148,20 +177,32 @@ sudo firewall-cmd --reload
 |---|---|---|
 | `prometheus/prometheus.yml` | `podman kill -s HUP prometheus` | app re-reads config; container keeps running, no data gap |
 | `grafana/provisioning/**` | `systemctl --user restart grafana` | Grafana reads provisioning only at startup |
-| any `.container` / `.volume` | `cp` to `~/.config/containers/systemd/`, `systemctl --user daemon-reload`, then `restart` | the *unit* must be regenerated |
+| any `.container` / `.volume` | `systemctl --user daemon-reload`, then `restart` | the *unit* must be regenerated from the file |
 
-**The `cp` is the deploy.** The repo is the source of truth, but systemd only reads
-`~/.config/containers/systemd/`. Editing the repo copy alone changes nothing.
+**No copy step — the units are symlinked.** Edit in the repo (or `git pull`), then
+`daemon-reload` to regenerate and `restart` to apply. A `restart` and not a `reload`,
+because a running container cannot gain a new mount; it has to be recreated.
 
 ### Validate before applying, every time
 
 ```bash
 podman run --rm --entrypoint promtool -v ~/atlas/hosts/macnode/prometheus:/c:ro,Z \
   docker.io/prom/prometheus:v3.13.2 check config /c/prometheus.yml
+podman run --rm --entrypoint promtool -v ~/atlas/hosts/macnode/prometheus/rules:/r:ro,Z \
+  docker.io/prom/prometheus:v3.13.2 check rules /r/alerts.yml
 python3 -m json.tool ~/atlas/hosts/macnode/grafana/provisioning/dashboards/atlas-gpu.json >/dev/null
 ```
 
-Bad dashboard JSON fails **silently** — the dashboard simply never appears.
+`check rules` is a separate run and not optional. `check config` resolves `rule_files:`
+against the *container* paths, which don't exist on the host, so the glob matches nothing
+and it passes without having looked at a single rule.
+
+`--entrypoint promtool` because the image's entrypoint is `prometheus` — without it,
+`promtool` is passed to prometheus as an argument and you get `unexpected promtool`.
+
+Bad dashboard JSON fails **silently** — the dashboard simply never appears. So does a
+templating error in an alert's `summary`: the rule loads fine and only breaks when it
+fires, which is the worst possible time to find out.
 
 ### Dashboards are read-only in the UI
 
@@ -287,9 +328,15 @@ by 351 MiB before it starts. Verified against `nvidia-smi` 2026-08-15.
 
 ## Known open items
 
-- Alerts not yet built. Planned: `ServiceDownWhileHostUp`, `DiskWillFillIn7Days`
-  (predict_linear), `GPUVRAMNearLimit` at ~7,200 MiB (92% of *usable* — 7,600 would fire at 97%,
-  too late to react).
+- **No Alertmanager, so nothing notifies.** Rules evaluate and a firing alert appears at
+  `:9090/alerts`, but only if you go and look — which is the same failure mode as the
+  55-hour blind outage that prompted writing rules in the first place. Prometheus evaluates;
+  Alertmanager routes. Only half of that exists.
+- Alerting is minimal: `TargetDown` is the only rule. Still planned:
+  `ServiceDownWhileHostUp` (distinguishes a crashed service from a powered-off host, which
+  `TargetDown` cannot), `DiskWillFillIn7Days` (predict_linear), `GPUVRAMNearLimit` at ~7,200
+  MiB (92% of *usable* — 7,600 would fire at 97%, too late to react).
 - No backups of Prometheus's volume. It holds the only copy of all history.
 - atlas idles at **57W** with 0 MiB VRAM used and 4% utilization; an RTX 3070 should idle nearer
   15–20W. Unexplained. ~40W constant is roughly 350 kWh/year.
+
