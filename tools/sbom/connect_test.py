@@ -5,7 +5,6 @@ with psycopg.connect(
         host="127.0.0.1",
         dbname="atlas",
         user="atlas",
-        password=os.environ["PGPASSWORD"],
 ) as conn:
         with conn.cursor() as cur:
                 cur.execute(
