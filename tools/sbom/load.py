@@ -1,6 +1,6 @@
-import sys
 import psycopg
 import json
+import argparse
 
 
 def read_report(path):
@@ -82,18 +82,24 @@ def insert_findings(cur, scan_id, package_id, vuln):
         ),
     )
 
-report = read_report(sys.argv[1])
-with psycopg.connect(
-    host="127.0.0.1",
-    dbname="atlas",
-    user="atlas",
-) as conn:
-    with conn.cursor() as cur:
-        scan_id = insert_scan(cur,report)
-        print("scan_id:", scan_id)
-        
-        for result in report["Results"]:
-            for vuln in result.get("Vulnerabilities", []):
-                package_id = insert_package(cur, vuln)
-                insert_vulnerability(cur, vuln)
-                insert_findings(cur, scan_id, package_id, vuln)
+
+parser = argparse.ArgumentParser(description="Load Trivy JSON reports into Postgres.")
+parser.add_argument("reports", nargs="+", help="one or more Trivy JSON report files")
+args = parser.parse_args()
+for path in args.reports:
+    report = read_report(path)
+    
+    with psycopg.connect(
+        host="127.0.0.1",
+        dbname="atlas",
+        user="atlas",
+    ) as conn:
+        with conn.cursor() as cur:
+            scan_id = insert_scan(cur,report)
+            print("scan_id:", scan_id)
+            
+            for result in report["Results"]:
+                for vuln in result.get("Vulnerabilities", []):
+                    package_id = insert_package(cur, vuln)
+                    insert_vulnerability(cur, vuln)
+                    insert_findings(cur, scan_id, package_id, vuln)
