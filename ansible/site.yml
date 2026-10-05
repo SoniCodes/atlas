@@ -1,0 +1,7 @@
+- name: Baseline for every homelab machine
+  hosts: homelab
+  become: true
+  tasks:
+    - name: set timezone to UTC
+      community.general.timezone:
+        name: Etc/UTC
