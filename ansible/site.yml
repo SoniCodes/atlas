@@ -14,3 +14,17 @@
           - git
           - jq
         state: present
+
+    - name: Install dig (Debian family)
+      ansible.builtin.package:
+        name: dnsutils
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Install dig (Red hat family)
+      ansible.builtin.package:
+        name: bind-utils
+        state: present
+      when: ansible_facts['os_family'] == "RedHat"
