@@ -5,3 +5,12 @@
     - name: set timezone to UTC
       community.general.timezone:
         name: Etc/UTC
+
+    - name: Install baseline troubleshooting tools
+      ansible.builtin.package:
+        name:
+          - curl
+          - htop
+          - git
+          - jq
+        state: present
