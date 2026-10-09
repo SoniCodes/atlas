@@ -28,3 +28,25 @@
         name: bind-utils
         state: present
       when: ansible_facts['os_family'] == "RedHat"
+
+    - name: Create drop-in directory for apt-daily
+      ansible.builtin.file:
+        path: /etc/systemd/system/apt-daily.service.d
+        state: directory
+        mode: "0755"
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Time out apt-daily instead of hanging forever.
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/apt-daily.service.d/timeout.conf
+        content: |
+          [Service]
+          TimeoutStartSec=1h
+        mode: "0644"
+      when: ansible_facts['os_family'] == "Debian"
+      notify: Reload systemd
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd_service:
+        daemon_reload: true
