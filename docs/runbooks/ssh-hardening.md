@@ -1,24 +1,33 @@
 # Runbook: SSH hardening
 
-Disable password authentication on a host so only key auth is accepted.
+Turn off password logins so the only way in is with a key.
 
-## Gotcha: drop-in ordering is FIRST match wins
+This is managed by Ansible now. The task "Harden ssh (key-only login)" in
+`ansible/site.yml` copies `security/01-hardening.conf` onto every host, checks it
+with `sshd -t` before putting it in place, and reloads sshd if it changed. To
+change anything, edit the file in the repo and run the playbook. Don't edit it on
+the servers by hand.
 
-`/etc/ssh/sshd_config` has `Include /etc/ssh/sshd_config.d/*.conf` and sshd uses the
-**first** value it finds for each setting. Files are read in lexical order, so
+The manual steps below are still worth knowing. They're what the playbook does
+for you, and they're how you'd fix a host Ansible can't reach.
+
+## Gotcha: first match wins
+
+`/etc/ssh/sshd_config` has `Include /etc/ssh/sshd_config.d/*.conf`, and sshd uses
+the **first** value it finds for each setting. Files are read in name order, so
 `50-cloud-init.conf` beats `99-anything.conf`.
 
-Name the file with a LOW number (`01-hardening.conf`) so it is read first.
+That's why the file is `01-hardening.conf`. A low number gets read first.
 
-This is the OPPOSITE of netplan, where higher-numbered files win.
+Netplan works the other way, where higher numbers win. Easy to mix up.
 
-## Procedure
+## Manual procedure
 
-Keep your current SSH session open through the entire procedure. Do not close it
-until step 5 passes.
+Keep your current SSH session open the whole time. Don't close it until step 5
+works.
 
-1. Check the current effective config. `sshd -T` shows the result after all includes,
-   which is what actually matters — not what any single file says.
+1. Check what's actually in effect right now. `sshd -T` shows the final result
+   after every include is read. That's what matters, not what any one file says.
 
        sudo sshd -T | grep -iE 'passwordauthentication|kbdinteractive|permitrootlogin'
 
@@ -30,30 +39,40 @@ until step 5 passes.
        KbdInteractiveAuthentication no
        PermitRootLogin prohibit-password
 
-3. Validate syntax BEFORE applying. If this errors, fix it and do not continue.
+3. Check the syntax before applying it. If this errors, fix it and stop there.
 
        sudo sshd -t && echo "SYNTAX OK"
        sudo sshd -T | grep -iE 'passwordauthentication|kbdinteractive|permitrootlogin'
 
-   The second command confirms your file actually won the ordering fight.
+   The second command tells you your file actually won the ordering.
 
-4. Reload (not restart — reload keeps existing connections alive):
+4. Reload, don't restart. Reload keeps your current connection alive.
 
-       sudo systemctl reload ssh
+       sudo systemctl reload ssh      # Ubuntu
+       sudo systemctl reload sshd     # Fedora
 
-5. From a SECOND terminal on another machine, confirm key auth still works:
+   Same service, different name on each distro. The playbook handles that with
+   one handler per distro.
+
+5. From a second terminal on a different machine, make sure key login still works:
 
        ssh atlas "echo ok"
 
-   Only close the original session after this succeeds.
+   Only close the first session once this works.
 
 ## Note
 
-Running `ssh atlas` from Atlas resolves to 127.0.1.1 and fails with
-`Permission denied (publickey)` — the host has no key authorized for itself. That is
-expected and is not a failure of the hardening. Always test from a different machine.
+`ssh atlas` run from atlas itself resolves to 127.0.1.1 and fails with
+`Permission denied (publickey)`. Atlas doesn't have a key authorized for itself.
+That's expected, not a hardening problem. Always test from another machine.
 
 ## Applied to
 
-- atlas — 2026-08-10
-- macnode — TODO (also offers gssapi; also runs Cockpit on the LAN)
+- atlas: by hand on 2026-08-10.
+- macnode: already had the same file when Ansible first checked it on 2026-10-12.
+  I don't know exactly when it went on. This runbook still said TODO, so the docs
+  had fallen behind the server. Confirmed with `sshd -T`.
+- Both hosts are managed by the Ansible task as of 2026-10-12.
+
+When I first wrote this, I noted that macnode also offers GSSAPI auth and runs
+Cockpit on the LAN. This file doesn't touch either one, and I haven't rechecked them.
