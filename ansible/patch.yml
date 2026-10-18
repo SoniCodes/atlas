@@ -83,10 +83,11 @@
       ansible.builtin.uri:
         url: http://localhost:3000/api/health
       register: grafana_health
-      until: grafana_health.status == 0
+      until: grafana_health.status == 200
       retries: 10
       delay: 6
       check_mode: false
       when: inventory_hostname == "macnode"
+
 
 
