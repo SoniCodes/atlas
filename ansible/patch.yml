@@ -2,6 +2,14 @@
   hosts: homelab
   become: true
   serial: 1
+  vars:
+    atlas_containers: 
+      - postgres
+      - jenkins
+      - gateway
+      - nvidia-exporter
+      - ollama
+      - node-exporter
   tasks:
     - name: Upgrade all packages (Debian)
       ansible.builtin.apt:
@@ -30,7 +38,7 @@
       check_mode: false
       when: ansible_facts['os_family'] == "RedHat"
 
-    - name: Reboot is needed (Debian)
+    - name: Reboot if needed (Debian)
       ansible.builtin.reboot:
         reboot_timeout: 600
       when:
@@ -43,3 +51,22 @@
       when:
         - ansible_facts['os_family'] == "RedHat"
         - needs_restart.rc == 1
+
+    - name: Verify the GPU works inside a container (atlas)
+      ansible.builtin.command: docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
+      changed_when: false
+      check_mode: false
+      when: inventory_hostname == "atlas"
+
+    - name: Verify expected containers are running (atlas)
+      ansible.builtin.command: docker ps --quiet --filter name={{ item }} --filter status=running
+      loop: "{{ atlas_containers }}"
+      register: container_check
+      until: container_check.stdout != ""
+      retries: 10
+      delay: 6
+      changed_when: false
+      check_mode: false
+      when: inventory_hostname == "atlas"
+
+
