@@ -69,4 +69,24 @@
       check_mode: false
       when: inventory_hostname == "atlas"
 
+    - name: Verify Prometheus is ready (macnode)
+      ansible.builtin.uri:
+        url: http://localhost:9090/-/ready
+      register: prom_ready
+      until: prom_ready.status == 200
+      retries: 10
+      delay: 6
+      check_mode: false
+      when: inventory_hostname == "macnode"
+
+    - name: Verify Grafana is healthy (macnode)
+      ansible.builtin.uri:
+        url: http://localhost:3000/api/health
+      register: grafana_health
+      until: grafana_health.status == 0
+      retries: 10
+      delay: 6
+      check_mode: false
+      when: inventory_hostname == "macnode"
+
 
