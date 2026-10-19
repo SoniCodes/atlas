@@ -63,6 +63,20 @@
         - Reload sshd (Debian)
         - Reload sshd (RedHat)
 
+    - name: Keep the NVIDIA driver out of automatic upgrades
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/51-atlas-nvidia-blacklist
+        content: |
+          // Managed by Ansible. NVIDIA driver upgrades only happen through
+          // patch.yml, which reboots and verifies the GPU afterward.
+          Unattended-Upgrade::Package-Blacklist {
+              "nvidia-";
+              "libnvidia-";
+              "xserver-xorg-video-nvidia-";
+          };
+        mode: "0644"
+      when: ansible_facts['os_family'] == "Debian"
+      
   handlers:
     - name: Reload systemd
       ansible.builtin.systemd_service:
@@ -79,3 +93,4 @@
           name: sshd 
           state: reloaded
       when: ansible_facts['os_family'] == "RedHat"
+
