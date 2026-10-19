@@ -88,6 +88,3 @@
       delay: 6
       check_mode: false
       when: inventory_hostname == "macnode"
-
-
-
