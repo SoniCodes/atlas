@@ -1,0 +1,9 @@
+- name: Harden ssh (key-only login)
+  ansible.builtin.copy:
+    src: 01-hardening.conf
+    dest: /etc/ssh/sshd_config.d/01-hardening.conf
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  notify:
+    - Reload sshd (Debian)
+    - Reload sshd (RedHat)

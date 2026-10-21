@@ -2,11 +2,11 @@
 
 Turn off password logins so the only way in is with a key.
 
-This is managed by Ansible now. The task "Harden ssh (key-only login)" in
-`ansible/site.yml` copies `security/01-hardening.conf` onto every host, checks it
-with `sshd -t` before putting it in place, and reloads sshd if it changed. To
-change anything, edit the file in the repo and run the playbook. Don't edit it on
-the servers by hand.
+This is managed by Ansible now. The `ssh_hardening` role in
+`ansible/roles/ssh_hardening/` copies `files/01-hardening.conf` onto every host,
+checks it with `sshd -t` before putting it in place, and reloads sshd if it
+changed. To change anything, edit that file in the repo and run `site.yml`. Don't
+edit it on the servers by hand.
 
 The manual steps below are still worth knowing. They're what the playbook does
 for you, and they're how you'd fix a host Ansible can't reach.

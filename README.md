@@ -124,6 +124,7 @@ Listed because they're real, not because they're planned:
 
 ## Layout
 
+- `ansible/`: playbooks for both hosts (`site.yml` baseline, `patch.yml` patching) and roles
 - `stacks/`: Docker Compose services on atlas (ollama, gateway, postgres, monitoring, jenkins)
 - `hosts/macnode/`: Prometheus and Grafana Quadlet units, configs and alert rules
 - `tools/sbom/`: container image vulnerability scanner and loader
@@ -133,4 +134,4 @@ Listed because they're real, not because they're planned:
 - `Jenkinsfile`: CI pipeline
 - `scripts/`: setup helpers
 - `network/`: netplan
-- `security/`: sshd hardening drop-in
+- `ansible/roles/ssh_hardening/`: sshd hardening drop-in, applied to every host by Ansible

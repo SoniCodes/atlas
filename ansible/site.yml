@@ -1,6 +1,8 @@
 - name: Baseline for every homelab machine
   hosts: homelab
   become: true
+  roles:
+    - ssh_hardening
   tasks:
     - name: set timezone to UTC
       community.general.timezone:
@@ -53,16 +55,6 @@
         version: main
       become: false
 
-    - name: Harden ssh (key-only login)
-      ansible.builtin.copy:
-        src: ../security/01-hardening.conf
-        dest: /etc/ssh/sshd_config.d/01-hardening.conf
-        mode: "0644"
-        validate: /usr/sbin/sshd -t -f %s
-      notify: 
-        - Reload sshd (Debian)
-        - Reload sshd (RedHat)
-
     - name: Keep the NVIDIA driver out of automatic upgrades
       ansible.builtin.copy:
         dest: /etc/apt/apt.conf.d/51-atlas-nvidia-blacklist
@@ -76,21 +68,10 @@
           };
         mode: "0644"
       when: ansible_facts['os_family'] == "Debian"
-      
+
   handlers:
     - name: Reload systemd
       ansible.builtin.systemd_service:
         daemon_reload: true
 
-    - name: Reload sshd (Debian)
-      ansible.builtin.systemd_service: 
-        name: ssh
-        state: reloaded
-      when: ansible_facts['os_family'] == "Debian"
-
-    - name: Reload sshd (RedHat)
-      ansible.builtin.systemd_service:
-          name: sshd 
-          state: reloaded
-      when: ansible_facts['os_family'] == "RedHat"
 
