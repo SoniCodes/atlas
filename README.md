@@ -7,7 +7,7 @@ Atlas runs the workloads. macnode runs monitoring, and it's a separate machine o
 purpose: if Atlas dies, something that isn't Atlas notices. Backups are pulled by
 Atlas, not pushed by macnode.
 
-See [the architecture diagram](docs/images/atlas-architecture.jpg).
+See [the architecture diagram](docs/images/atlas-architecture-v2.jpg). The [first version](docs/images/atlas-architecture.jpg) is kept for history.
 
 ## What runs here
 
