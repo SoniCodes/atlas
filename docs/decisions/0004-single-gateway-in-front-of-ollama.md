@@ -117,8 +117,6 @@ active check.
 
 **OpenClaw is retired.**
 
-> **DECISION PENDING — confirm or flip this section before committing.**
-
 ADR 0003 already demoted OpenClaw to actuator-only: perception requests go direct to Ollama
 because the agent loop cost 25.5s against 4.6s. The gateway absorbs that remaining role.
 
@@ -197,3 +195,33 @@ Four hypotheses died during this work, which is the actual reason to write any o
 Also worth keeping: **clocks and power cannot disprove "the query woke it up," because reading
 nvidia-smi initializes NVML and wakes the GPU.** Temperature is the valid instrument — it has
 thermal inertia and a query cannot warm a heatsink. That is how the exporter was exonerated.
+
+## Update 2026-11-15
+
+**Decision confirmed: OpenClaw is retired.** `openclaw-gateway`, a systemd user unit, is stopped
+and disabled. It stays installed, with its config in `~/.openclaw`, so this can be undone with
+`systemctl --user enable --now openclaw-gateway`. `scripts/configure-openclaw.sh` was removed in
+d4655ad. ADR 0003 still mentions it, and git history keeps it.
+
+**num_ctx is now 4000.** The Modelfile change went through the `ollama_models` Ansible role,
+which saw the new Modelfile and rebuilt `qwen3-vl-atlas` on its own. A second run changed
+nothing. Measured with the model loaded, before and after:
+
+| | num_ctx 16000 | num_ctx 4000 |
+|---|---|---|
+| `ollama ps` size | 5.4 GB | 3.5 GB |
+| `nvidia-smi` memory used | 6,371 MiB | 4,361 MiB |
+
+That frees **2,010 MiB**, more than the 1,706 MiB estimated above.
+
+**Known limit: image downscaling is decided above but not built yet.** The gateway still sends
+images at full size. The runner's real window is 4,096 tokens (`-c 4000`, rounded up; its log
+reports 4096). One full-size 4032x3024 phone photo used 4,032 prompt tokens. Nothing was
+truncated, but only 32 tokens were left, so an answer much longer than the 33 tokens it gave
+would run out of room, and context shifting is disabled for this model. Nothing sends photos to
+the gateway today, so this waits for a real client. When one arrives, build the downscaling
+instead of raising num_ctx again.
+
+That request also took 10.6s of prefill, against the 2.72s measured above for the same size of
+photo. It was a single cold run right after the model loaded, so it is not a measurement.
+Re-measure before trusting either number.
