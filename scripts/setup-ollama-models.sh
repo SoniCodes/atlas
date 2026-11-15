@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+# Superseded by the Ansible role in ansible/roles/ollama_models, kept for reference.
 set -euo pipefail
 
 CONTAINER="ollama"

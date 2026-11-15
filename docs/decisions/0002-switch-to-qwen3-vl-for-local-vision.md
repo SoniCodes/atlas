@@ -36,3 +36,6 @@ instead of the real 16000 limit.
 
 Supersedes [0001](0001-use-moondream-instead-of-qwen-for-local-vision.md).
 
+**Update 2026-11-14:** rebuilds now use the Ansible role [ollama_models](../../ansible/roles/ollama_models/),
+run as part of `ansible/site.yml`. It creates qwen3-vl-atlas only when the model is missing or the
+Modelfile changed, so it is safe to rerun. `scripts/setup-ollama-models.sh` stays for reference.
