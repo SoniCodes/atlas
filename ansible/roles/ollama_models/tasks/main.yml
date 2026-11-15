@@ -1,0 +1,39 @@
+- name: Read base model from Modelfile
+  ansible.builtin.command: awk '/^FROM/ {print $2}' "{{ ollama_models_modelfile_path }}"
+  register: base_model
+  changed_when: false
+  check_mode: false
+
+- name: Get list of models that exist on ollama
+  community.docker.docker_container_exec:
+    container: "{{ ollama_models_container }}"
+    command: ollama list
+  register: ollama_list
+  check_mode: false
+  changed_when: false
+
+- name: Pull base model
+  community.docker.docker_container_exec:
+    container: "{{ ollama_models_container }}"
+    command: ollama pull "{{ base_model.stdout }}"
+  when: base_model.stdout not in ollama_list.stdout
+
+- name: Copy Modelfile into the container
+  community.docker.docker_container_copy_into:
+    container: "{{ ollama_models_container }}"
+    path: "{{ ollama_models_modelfile_path }}"
+    container_path: "{{ ollama_models_modelfile_container_path }}"
+  register: modelfile_copy
+
+- name: Create a custom model
+  community.docker.docker_container_exec:
+    container: "{{ ollama_models_container }}"
+    command: ollama create "{{ ollama_models_custom_model }}" -f "{{ ollama_models_modelfile_container_path }}"
+  when: modelfile_copy.changed or ollama_models_custom_model not in ollama_list.stdout
+
+- name: Verify that custom model exists
+  community.docker.docker_container_exec:
+    container: "{{ ollama_models_container }}"
+    command: ollama show "{{ ollama_models_custom_model }}"
+  check_mode: false
+  changed_when: false

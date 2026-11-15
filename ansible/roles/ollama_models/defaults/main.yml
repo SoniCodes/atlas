@@ -1,0 +1,4 @@
+ollama_models_container: ollama
+ollama_models_custom_model: qwen3-vl-atlas
+ollama_models_modelfile_path: /home/vraj/atlas/stacks/ollama/Modelfile
+ollama_models_modelfile_container_path: /root/Modelfile
