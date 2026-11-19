@@ -1,0 +1,17 @@
+[Unit]
+Description=Alertmanager
+After=network-online.target
+
+[Container]
+Image=docker.io/prom/alertmanager:v0.35.0
+ContainerName=alertmanager
+PublishPort=9093:9093
+Volume=alertmanager-data.volume:/alertmanager
+Volume=%h/atlas/hosts/macnode/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro,Z
+Secret=alertmanager-discord-webhook,type=mount,target=/run/secrets/alertmanager_discord_webhook
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
